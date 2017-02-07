@@ -1,0 +1,74 @@
+<div class="plein-container">
+    <textarea class="plein-input"></textarea>
+    <div class="plein-content" on:update="update()"></div>
+</div>
+
+
+<style>
+    .plein-container {
+        position: relative;
+        min-height: 18px;
+        max-height: 100%;
+
+        overflow-y: auto;
+        cursor: text;
+    }
+
+    .plein-input {
+        position: absolute;
+
+        border: 0;
+        padding: 0;
+        margin: 0;
+        resize: none;
+
+        overflow: hidden;
+
+        /* todo change to 0 for production */
+        opacity: 0.2;
+    }
+
+    .plein-content {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+
+<script>
+    export default {
+        data() {
+            return {
+                content: []
+            }
+        },
+        events: {
+            update(node, callback) {
+                let stopped = false;
+
+                function run() {
+                    if (stopped) {
+                        return;
+                    }
+                    callback(node);
+
+                    if (!stopped) {
+                        requestAnimationFrame(run);
+                    }
+                }
+                requestAnimationFrame(run);
+
+                return {
+                    teardown() {
+                        stopped = true;
+                    }
+                }
+            }
+        },
+        methods: {
+            update() {
+                this.get('content').forEach(content => content.update());
+            }
+        }
+    };
+</script>
