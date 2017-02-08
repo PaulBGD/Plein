@@ -1,8 +1,7 @@
-<div class="plein-container">
-    <textarea class="plein-input"></textarea>
-    <div class="plein-content" on:update="update()"></div>
+<div class="plein-container" on:click="focus()">
+    <textarea class="plein-input" ref:input on:input="handle(event)" on:keydown="keydown(event)" on:keyup="keyup(event)"></textarea>
+    <div class="plein-content" ref:content></div>
 </div>
-
 
 <style>
     .plein-container {
@@ -36,38 +35,77 @@
 </style>
 
 <script>
+    import BaseContent from './BaseContent';
+    import Cursor from './Cursor';
+
+    // this should be the only content type included
+    import ParagraphContentType from './paragraph-content-type/ParagraphContentType';
+
     export default {
         data() {
+            const data = {};
+            const self = this;
             return {
-                content: []
-            }
+                '_methods': self.methods,
+                'types': {
+                    'paragraph': ParagraphContentType
+                }
+            };
         },
-        events: {
-            update(node, callback) {
-                let stopped = false;
+        onrender() {
+            const methods = this.get('_methods');
+            Object.keys(methods).forEach(method => methods[method] = methods[method].bind(this));
 
-                function run() {
-                    if (stopped) {
-                        return;
-                    }
-                    callback(node);
+            const content = new BaseContent(methods);
+            const cursor = new Cursor(content);
+            this.set({
+                'content': content,
+                'cursor': cursor,
+                '_methods': undefined
+            });
 
-                    if (!stopped) {
-                        requestAnimationFrame(run);
-                    }
-                }
-                requestAnimationFrame(run);
-
-                return {
-                    teardown() {
-                        stopped = true;
-                    }
-                }
-            }
+            this.get('content').create(this.refs.content, cursor);
         },
         methods: {
-            update() {
-                this.get('content').forEach(content => content.update());
+            handle() {
+                const text = this.refs.input.value;
+                this.get('content').handle('change', this.get('cursor'), text);
+                this.refs.input.value = '';
+            },
+            focus() {
+                this.refs.input.focus();
+            },
+            registerContentType(contentType) {
+                if (typeof contentType.ID !== 'string') {
+                    throw new Error('Content type does not have ID!');
+                }
+                this.get('types')[contentType.ID] = contentType;
+            },
+            getContentType(id) {
+                return this.get('types')[id];
+            },
+            keydown(event) {
+                console.log(event.keyCode);
+                switch (event.keyCode) {
+                    case 8: // space
+                        const isMac = ~navigator.platform.toUpperCase().indexOf('MAC');
+                        if ((isMac && event.metaKey) || (!isMac && event.ctrlKey)) {
+                            this.get('content').handle('deleteWord', this.get('cursor'));
+                        } else {
+                            this.get('content').handle('delete', this.get('cursor'), 1);
+                        }
+                        break;
+                    case 37: // left
+                        break;
+                    case 38: // up
+                        break;
+                    case 39: // right
+                        break;
+                    case 40: // down
+                        break;
+                }
+            },
+            keyup(event) {
             }
         }
     };
